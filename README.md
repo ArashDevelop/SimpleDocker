@@ -58,6 +58,12 @@ This checks and prints the resolved Compose configuration. It does not start con
 
 ### 5. Build images and start all services
 
+Create the persistent MongoDB volume once on each Docker host. If it already exists, this command keeps its existing data:
+
+```cmd
+docker volume create simpledocker_mongo_data
+```
+
 ```cmd
 docker compose up --build -d
 ```
@@ -65,9 +71,9 @@ docker compose up --build -d
 Docker Compose builds the API image and the Nginx image (which also builds the React frontend), downloads the MongoDB image if needed, creates the containers, and automatically creates:
 
 - The shared bridge network `todo_network`, connecting `nginx`, `api` and `mongo` so the containers can communicate with each other.
-- The `mongo_data` named volume declared in `docker-compose.yml`, which stores MongoDB data outside the container's writable layer.
+- The external Docker volume `simpledocker_mongo_data`, which stores MongoDB data outside the container's writable layer and is retained even when Compose removes the project with `docker compose down -v`.
 
-You do not need to run `docker network create` or `docker volume create` yourself. Nginx serves the frontend files from its own image and forwards `/api/` to `api:5000`; the API connects to MongoDB at `mongo:27017` over the shared network.
+You do not need to create the network manually. Nginx serves the frontend files from its own image and forwards `/api/` to `api:5000`; the API connects to MongoDB at `mongo:27017` over the shared network.
 
 ### 6. Check that the services are running
 
@@ -108,13 +114,20 @@ Run these from the project root (`C:\Workstation\Training\Docker\SimpleDocker`).
 | List Docker networks | `docker network ls` |
 | Inspect the shared Compose network | `docker network inspect todo_network` |
 
-`docker compose down` keeps the `mongo_data` volume, so tasks remain saved. To remove the containers **and permanently erase the MongoDB data volume**, run this only when you really want a fresh database:
+`docker compose down` removes the containers and network while keeping `simpledocker_mongo_data`, so tasks remain saved. The database volume is managed separately and is not deleted by `docker compose down -v` either. To permanently erase the MongoDB data, explicitly remove the volume only when you really want a fresh database:
 
 ```cmd
-docker compose down -v
+docker volume rm simpledocker_mongo_data
 ```
 
-The next `docker compose up --build -d` will create a new empty volume and the shared network automatically. You normally should not create or delete either manually. If you need to inspect them, use `docker volume ls` and `docker network ls`; the explicitly named network is `todo_network`.
+After deleting it, create it again before starting the stack:
+
+```cmd
+docker volume create simpledocker_mongo_data
+docker compose up --build -d
+```
+
+Compose creates the shared network automatically. If you need to inspect Docker storage, use `docker volume ls` and `docker volume inspect simpledocker_mongo_data`.
 
 ### Optional: build or start only one service
 

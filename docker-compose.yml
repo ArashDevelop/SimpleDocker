@@ -58,6 +58,8 @@ services:
 
 volumes:
   mongo_data:
+    name: simpledocker_mongo_data
+    external: true
 
 networks:
   todo_network:
